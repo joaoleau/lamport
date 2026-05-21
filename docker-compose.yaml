@@ -1,0 +1,86 @@
+services:
+  lamport-server-1:
+    container_name: lambort-server-1
+    image: lamport-server:latest
+    environment:
+      PORT_SYNC: 5001
+      PORT_WS: 5000
+      REPLICAS: lamport-server-2,lamport-server-3
+    restart: unless-stopped
+    networks:
+      - lamport-network
+
+  lamport-server-2:
+    container_name: lambort-server-2
+    image: lamport-server:latest
+    environment:
+      PORT_SYNC: 5001
+      PORT_WS: 5000
+      REPLICAS: lamport-server-1,lamport-server-3
+    restart: unless-stopped
+    networks:
+      - lamport-network
+
+  lamport-server-3:
+    container_name: lambort-server-3
+    image: lamport-server:latest
+    environment:
+      PORT_SYNC: 5001
+      PORT_WS: 5000
+      REPLICAS: lamport-server-1,lamport-server-2
+    restart: unless-stopped
+    networks:
+      - lamport-network
+
+  load-balancer:
+    container_name: lamport-load-balancer
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+    restart: unless-stopped
+    depends_on:
+      - lamport-server-1
+      - lamport-server-2
+      - lamport-server-3
+    networks:
+      - lamport-network
+
+  client-1:
+    image: nginx:alpine
+    container_name: client-1
+    ports:
+      - "8081:80"
+    volumes:
+      - ./front:/usr/share/nginx/html
+    restart: unless-stopped
+    networks:
+      - lamport-network
+
+  client-2:
+    image: nginx:alpine
+    container_name: client-2
+    ports:
+      - "8082:80"
+    volumes:
+      - ./front:/usr/share/nginx/html
+    restart: unless-stopped
+    networks:
+      - lamport-network
+
+  client-3:
+    image: nginx:alpine
+    container_name: client-3
+    ports:
+      - "8083:80"
+    volumes:
+      - ./front:/usr/share/nginx/html
+    restart: unless-stopped
+    networks:
+      - lamport-network
+
+networks:
+  lamport-network:
+    name: lamport-network
+    driver: bridge

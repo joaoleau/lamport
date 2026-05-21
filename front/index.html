@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Distribuído - Sistemas Distribuídos</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="chat-container">
+        <div class="chat-header">
+            <h2>Chat Distribuído</h2>
+
+            <div class="status">
+                <span id="status-text">Desconectado</span>
+                <div id="status-dot" class="status-dot disconnected"></div>
+            </div>
+        </div>
+
+        <div class="user-config">
+            <input
+                type="text"
+                id="nome-usuario"
+                placeholder="Seu Nome"
+                value="Aluno"
+            >
+
+            <small>
+                Defina seu nome antes de enviar
+            </small>
+        </div>
+
+        <div class="chat-history" id="chat-history">
+            <!-- mensagens -->
+        </div>
+
+        <div class="chat-input-area">
+            <input
+                type="text"
+                id="texto-msg"
+                placeholder="Digite sua mensagem..."
+                autocomplete="off"
+            >
+
+            <button id="btn-enviar">
+                Enviar
+            </button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

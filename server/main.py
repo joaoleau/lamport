@@ -12,7 +12,7 @@ lamport_clock = 0
 mensagens = []
 clientes_locais = []
 
-# Como estamos usando Threads puras, PRECISAMOS de um Lock (Mutex) 
+# Como estamos usando Threads puras, precisamos de um Lock (Mutex) 
 # para evitar "Race Conditions" ao alterar o relógio lógico
 estado_lock = threading.Lock()
 
@@ -22,7 +22,7 @@ PORT_SYNC = int(os.getenv("PORT_SYNC", 5001))
 PORT_WS = int(os.getenv("PORT_WS", 5000))
 
 # ==========================================
-# FUNÇÕES DE WEBSOCKET (Feitas na unha)
+# FUNÇÕES DE WEBSOCKET
 # ==========================================
 def fazer_handshake_ws(conn, request):
     """Responde ao navegador com as chaves corretas para converter HTTP em WebSocket"""

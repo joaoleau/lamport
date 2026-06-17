@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat Distribuído - Sistemas Distribuídos</title>
+    <title>Chat Distribuído - Relógios de Lamport</title>
 
     <link rel="stylesheet" href="style.css">
 </head>
@@ -11,7 +11,7 @@
 
     <div class="chat-container">
         <div class="chat-header">
-            <h2>Chat Distribuído</h2>
+            <h2>Chat distribuído</h2>
 
             <div class="status">
                 <span id="status-text">Desconectado</span>
@@ -19,11 +19,23 @@
             </div>
         </div>
 
+        <!-- Mostra em qual réplica o balanceador colocou o cliente e o relógio lógico do nó -->
+        <div class="node-bar">
+            <div class="node-info">
+                <span class="node-label">Você caiu no</span>
+                <span id="node-name" class="node-name">nó —</span>
+            </div>
+            <div class="node-clock">
+                <span class="node-clock-label">relógio lógico do nó</span>
+                <span id="node-clock-value" class="node-clock-value">0</span>
+            </div>
+        </div>
+
         <div class="user-config">
             <input
                 type="text"
                 id="nome-usuario"
-                placeholder="Seu Nome"
+                placeholder="Seu nome"
                 value="Aluno"
             >
 
@@ -32,7 +44,7 @@
             </small>
         </div>
 
-        <div class="chat-history" id="chat-history">
+        <div class="chat-history" id="chat-history" aria-live="polite">
             <!-- mensagens -->
         </div>
 
@@ -48,6 +60,18 @@
                 Enviar
             </button>
         </div>
+
+        <!-- Legenda das regras do algoritmo de Lamport -->
+        <div class="lamport-legend">
+            <button id="btn-log" class="btn-log" type="button">Mostrar log de eventos</button>
+            <div class="legend-rules">
+                <span class="badge badge-local">local</span> relógio += 1
+                <span class="sep">·</span>
+                <span class="badge badge-recv">recebido</span> relógio = max(local, msg) + 1
+            </div>
+        </div>
+
+        <div id="event-log" class="event-log" hidden></div>
     </div>
 
     <script src="script.js"></script>

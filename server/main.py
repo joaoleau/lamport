@@ -4,6 +4,7 @@ import json
 import hashlib
 import base64
 import os
+import struct
 
 # ==========================================
 # ESTADO DO SERVIDOR E CONTROLE DE CONCORRÊNCIA
@@ -20,6 +21,9 @@ estado_lock = threading.Lock()
 REPLICAS = os.getenv("REPLICAS", "").split(",")
 PORT_SYNC = int(os.getenv("PORT_SYNC", 5001))
 PORT_WS = int(os.getenv("PORT_WS", 5000))
+
+# Identificador deste nó (mostrado no front para evidenciar a replicação)
+NODE_ID = os.getenv("SERVER_ID") or socket.gethostname()
 
 # ==========================================
 # FUNÇÕES DE WEBSOCKET
@@ -45,9 +49,15 @@ def fazer_handshake_ws(conn, request):
     conn.send(response.encode())
 
 def enviar_ws(conn, mensagem_dict):
-    """Empacota um JSON no formato de frames do WebSocket (Mensagens < 126 bytes)"""
+    """Empacota um JSON em um frame de texto do WebSocket (suporta payloads grandes)"""
     payload = json.dumps(mensagem_dict).encode('utf-8')
-    header = bytearray([129, len(payload)]) # 129 = Texto
+    tamanho = len(payload)
+    if tamanho < 126:
+        header = bytearray([129, tamanho])            # 129 = Texto
+    elif tamanho < 65536:
+        header = bytearray([129, 126]) + struct.pack(">H", tamanho)
+    else:
+        header = bytearray([129, 127]) + struct.pack(">Q", tamanho)
     try:
         conn.send(header + payload)
     except:
@@ -56,11 +66,18 @@ def enviar_ws(conn, mensagem_dict):
 def decodificar_ws(data):
     """Remove a máscara de segurança que o navegador coloca na mensagem"""
     if len(data) < 6: return ""
-    payload_len = data[1] & 127
-    masks = data[2:6]
-    payload = data[6:6+payload_len]
+    tamanho = data[1] & 127
+    inicio = 2
+    if tamanho == 126:
+        tamanho = struct.unpack(">H", data[2:4])[0]
+        inicio = 4
+    elif tamanho == 127:
+        tamanho = struct.unpack(">Q", data[2:10])[0]
+        inicio = 10
+    masks = data[inicio:inicio + 4]
+    payload = data[inicio + 4:inicio + 4 + tamanho]
     decoded = bytearray([payload[i] ^ masks[i % 4] for i in range(len(payload))])
-    return decoded.decode('utf-8')
+    return decoded.decode('utf-8', errors='ignore')
 
 # ==========================================
 # LÓGICA DE NEGÓCIO E SINCRONIZAÇÃO
@@ -71,26 +88,37 @@ def tratar_cliente_ws(conn, addr):
     fazer_handshake_ws(conn, request)
     clientes_locais.append(conn)
     print(f"[+] Cliente Web conectado: {addr}")
-    
+
     global lamport_clock
-    
+
+    # Diz ao cliente em qual nó o balanceador o colocou e o relógio lógico atual
+    with estado_lock:
+        enviar_ws(conn, {"tipo": "info", "node_id": NODE_ID, "node_clock": lamport_clock})
+
     try:
         while True:
             data = conn.recv(1024)
             if not data: break
-            
+
             texto_recebido = decodificar_ws(data)
             if not texto_recebido: continue
             pacote = json.loads(texto_recebido)
-            
+
             # --- PROTEGENDO A SEÇÃO CRÍTICA ---
             with estado_lock:
+                clock_antes = lamport_clock
                 lamport_clock += 1  # Regra 1: Evento Local
-                
+
                 nova_msg = {
                     "autor": pacote.get("autor", "User"),
                     "texto": pacote.get("texto", ""),
-                    "lamport_clock": lamport_clock
+                    "lamport_clock": lamport_clock,
+                    "origem": NODE_ID,       # nó que originou a mensagem
+                    "via": NODE_ID,          # nó que entregou ao cliente
+                    "evento": "envio",       # evento local de envio
+                    "clock_antes": clock_antes,
+                    "clock_depois": lamport_clock,
+                    "node_clock": lamport_clock,
                 }
                 mensagens.append(nova_msg)
             
@@ -115,15 +143,26 @@ def tratar_sincronizacao_replicas(conn, addr):
         data = conn.recv(1024).decode()
         if data:
             msg_recebida = json.loads(data)
-            
+
             with estado_lock:
+                clock_antes = lamport_clock
                 # Regra 2: Atualiza pro maior relógio + 1
                 lamport_clock = max(lamport_clock, msg_recebida["lamport_clock"]) + 1
+                clock_depois = lamport_clock
                 mensagens.append(msg_recebida)
-            
+
+            # Reescreve a perspectiva DESTE nó: ele recebeu a msg de outra réplica.
+            # O timestamp de ordenação (lamport_clock) continua sendo o do remetente.
+            msg_para_cliente = dict(msg_recebida)
+            msg_para_cliente["via"] = NODE_ID
+            msg_para_cliente["evento"] = "replica"
+            msg_para_cliente["clock_antes"] = clock_antes
+            msg_para_cliente["clock_depois"] = clock_depois
+            msg_para_cliente["node_clock"] = clock_depois
+
             # Repassa a mensagem do outro servidor para os clientes HTML deste servidor
             for cli in clientes_locais:
-                enviar_ws(cli, msg_recebida)
+                enviar_ws(cli, msg_para_cliente)
     except:
         pass
     finally:

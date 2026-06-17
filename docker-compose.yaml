@@ -3,6 +3,7 @@ services:
     container_name: lambort-server-1
     image: lamport-server:latest
     environment:
+      SERVER_ID: 1
       PORT_SYNC: 5001
       PORT_WS: 5000
       REPLICAS: lamport-server-2,lamport-server-3
@@ -14,6 +15,7 @@ services:
     container_name: lambort-server-2
     image: lamport-server:latest
     environment:
+      SERVER_ID: 2
       PORT_SYNC: 5001
       PORT_WS: 5000
       REPLICAS: lamport-server-1,lamport-server-3
@@ -25,6 +27,7 @@ services:
     container_name: lambort-server-3
     image: lamport-server:latest
     environment:
+      SERVER_ID: 3
       PORT_SYNC: 5001
       PORT_WS: 5000
       REPLICAS: lamport-server-1,lamport-server-2

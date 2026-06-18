@@ -5,9 +5,9 @@ import time
 
 # Configurações do Teste
 WS_URL = "ws://localhost:80"
-NUM_CLIENTES = 10       # Quantidade de abas simuladas
-MSGS_POR_CLIENTE = 20   # Quantas mensagens cada cliente vai mandar
-ATRASO_DISPARO = 0.05   # Atraso minúsculo para simular digitação ultrarrápida
+NUM_CLIENTES = 25       # Quantidade de abas simuladas
+MSGS_POR_CLIENTE = 10   # Quantas mensagens cada cliente vai mandar
+ATRASO_DISPARO = 0.10   # Atraso minúsculo para simular digitação ultrarrápida
 
 async def cliente_bot(client_id, resultados):
     """Simula um cliente conectando e enviando várias mensagens em rajada"""
